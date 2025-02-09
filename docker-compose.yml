@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+  user-service:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST=<44.203.204.212>
+      DB_NAME=dbusers
+      DB_USER=user_db
+      DB_PASSWORD=12345
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: dbusers
+      POSTGRES_USER: user_db
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5432:5432"

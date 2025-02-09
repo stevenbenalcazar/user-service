@@ -1,0 +1,35 @@
+name: Deploy User Service
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: 🛠️ Clonar repositorio
+        uses: actions/checkout@v3
+
+      - name: 🔨 Construir y subir imagen Docker
+        run: |
+          docker build -t user-service .
+          docker tag user-service:latest sabenalcazarm/user-service:latest
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          docker push sabenalcazarm/user-service:latest
+
+      - name: 🚀 Desplegar en EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i "micros.pem" ec2-user@<IP_PUBLICA_EC2> << EOF
+            docker pull sabenalcazarm/user-service:latest
+            docker stop user-service || true
+            docker rm user-service || true
+            docker run -d --name user-service -p 3000:3000 --network=taskify-network \
+              -e DB_HOST=<44.203.204.212> \
+              -e DB_NAME=dbusers \
+              -e DB_USER=user_db \
+              -e DB_PASSWORD=12345 \
+              sabenalcazarm/user-service:latest
+          EOF
