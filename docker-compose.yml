@@ -5,7 +5,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DB_HOST=<44.203.204.212>
+      DB_HOST=44.203.204.212
       DB_NAME=dbusers
       DB_USER=user_db
       DB_PASSWORD=12345

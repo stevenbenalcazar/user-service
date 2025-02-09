@@ -7,29 +7,48 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: 🛠️ Clonar repositorio
         uses: actions/checkout@v3
 
-      - name: 🔨 Construir y subir imagen Docker
+      - name: 🔨 Construir y subir imagen Docker a Docker Hub
         run: |
           docker build -t user-service .
-          docker tag user-service:latest sabenalcazarm/user-service:latest
+          docker tag user-service:latest ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          docker push sabenalcazarm/user-service:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
 
       - name: 🚀 Desplegar en EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ${{ secrets.EC2_USER }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i "micros.pem" ec2-user@<IP_PUBLICA_EC2> << EOF
-            docker pull sabenalcazarm/user-service:latest
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 400 private_key.pem
+
+          ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$HOST << EOF
+            echo "🔍 Verificando red Docker..."
+            docker network ls | grep taskify-network || docker network create taskify-network
+
+            echo "📥 Descargando nueva imagen desde Docker Hub..."
+            docker pull ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+
+            echo "🛑 Deteniendo y eliminando el contenedor anterior..."
             docker stop user-service || true
             docker rm user-service || true
+
+            echo "🚀 Iniciando nuevo contenedor..."
             docker run -d --name user-service -p 3000:3000 --network=taskify-network \
-              -e DB_HOST=<44.203.204.212> \
+              -e DB_HOST=${{ secrets.DB_HOST }} \
               -e DB_NAME=dbusers \
               -e DB_USER=user_db \
               -e DB_PASSWORD=12345 \
-              sabenalcazarm/user-service:latest
+              ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+
+            echo "✅ Despliegue completado."
           EOF
+
+          rm -f private_key.pem
