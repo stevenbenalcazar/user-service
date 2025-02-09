@@ -1,34 +1,27 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
+const dotenv = require('dotenv');
 const sequelize = require('./config/database');
 const userRoutes = require('./routes/userRoutes');
 
-require('dotenv').config();
-
+dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middlewares
+app.use(express.json());
 app.use(cors());
-app.use(bodyParser.json());
 
 // Rutas
 app.use('/api/users', userRoutes);
 
-// Iniciar el servidor
-const startServer = async () => {
+// Iniciar Servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, async () => {
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+
+  // Sincronizar Base de Datos
   try {
-    await sequelize.authenticate();
-    await sequelize.sync();
-    console.log('Conexión a la base de datos establecida.');
-
-    app.listen(PORT, () => {
-      console.log(`Servidor corriendo en http://localhost:${PORT}`);
-    });
+    await sequelize.sync({ force: false });
+    console.log('✅ Base de Datos sincronizada');
   } catch (error) {
-    console.error('Error al iniciar el servidor:', error);
+    console.error('❌ Error al sincronizar la base de datos:', error);
   }
-};
-
-startServer();
+});

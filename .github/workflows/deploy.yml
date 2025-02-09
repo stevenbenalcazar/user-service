@@ -10,17 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🛠️ Clonar repositorio
+      - name: 🛠️ Clonar el Repositorio
         uses: actions/checkout@v3
 
-      - name: 🔨 Construir y subir imagen Docker a Docker Hub
+      - name: 🔨 Construir y Subir Imagen a Docker Hub
         run: |
           docker build -t user-service .
           docker tag user-service:latest ${{ secrets.DOCKER_USERNAME }}/user-service:latest
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
 
-      - name: 🚀 Desplegar en EC2
+      - name: 🚀 Desplegar en AWS EC2
         env:
           PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           HOST: ${{ secrets.EC2_HOST }}
@@ -46,6 +46,7 @@ jobs:
               -e DB_NAME=dbusers \
               -e DB_USER=user_db \
               -e DB_PASSWORD=12345 \
+              -e JWT_SECRET=supersecretkey \
               ${{ secrets.DOCKER_USERNAME }}/user-service:latest
 
             echo "✅ Despliegue completado."

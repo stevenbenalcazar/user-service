@@ -1,36 +1,32 @@
 const User = require('../models/User');
-const SecurityService = require('../services/security');
-const AWS = require('aws-sdk');
+const jwt = require('jsonwebtoken');
 
-const sqs = new AWS.SQS({ region: process.env.AWS_REGION });
+const registerUser = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
 
-class UserController {
-  static async register(req, res) {
-    try {
-      const { email, password } = req.body;
-
-      // Hash del password
-      const hashedPassword = await SecurityService.hashPassword(password);
-
-      // Crear usuario en la base de datos
-      const newUser = await User.create({ email, password: hashedPassword });
-
-      // Enviar evento a SQS
-      const message = {
-        MessageBody: JSON.stringify({ userId: newUser.id, email: newUser.email }),
-        QueueUrl: process.env.SQS_QUEUE_URL,
-      };
-      await sqs.sendMessage(message).promise();
-
-      // Generar token JWT
-      const token = SecurityService.generateToken({ id: newUser.id, email: newUser.email });
-
-      return res.status(201).json({ message: 'Usuario registrado con éxito.', token });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: 'Error al registrar usuario.' });
+    // Validaciones
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: "Todos los campos son obligatorios" });
     }
-  }
-}
 
-module.exports = UserController;
+    // Verificar si el usuario ya existe
+    const userExists = await User.findOne({ where: { email } });
+    if (userExists) {
+      return res.status(400).json({ error: "El usuario ya está registrado" });
+    }
+
+    // Crear el usuario
+    const newUser = await User.create({ username, email, password });
+
+    // Generar token JWT
+    const token = jwt.sign({ id: newUser.id, email: newUser.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    res.status(201).json({ message: "Usuario registrado exitosamente", token });
+  } catch (error) {
+    console.error("Error en el registro:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+
+module.exports = { registerUser };

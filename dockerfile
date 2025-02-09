@@ -1,20 +1,20 @@
-# Usa Node.js como imagen base
-FROM node:18-slim
+# Usar Node.js como base
+FROM node:18
 
-# Establece el directorio de trabajo
+# Configurar el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Copia los archivos del proyecto
-COPY package.json package-lock.json ./
+# Copiar archivos necesarios al contenedor
+COPY package*.json ./
 
-# Instala las dependencias
-RUN npm install --only=production
+# Instalar dependencias
+RUN npm install
 
-# Copia el resto del código
+# Copiar el resto de los archivos
 COPY . .
 
-# Expone el puerto en el que correrá la aplicación
+# Exponer el puerto en el que corre el servicio
 EXPOSE 3000
 
-# Comando para iniciar la aplicación
+# Comando para ejecutar el servicio
 CMD ["node", "src/index.js"]
