@@ -24,7 +24,7 @@ cd user-service
 Crear un archivo `.env` en la raíz del proyecto con los siguientes valores:
 ```ini
 PORT=3000
-DB_HOST=44.203.204.212
+DB_HOST=44.209.170.207
 DB_NAME=dbusers
 DB_USER=user_db
 DB_PASSWORD=12345
