@@ -15,8 +15,7 @@ jobs:
 
       - name: 🔨 Construir y Subir Imagen a Docker Hub
         run: |
-          docker build -t user-service .
-          docker tag user-service:latest ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/user-service .
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
 
@@ -29,7 +28,7 @@ jobs:
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 400 private_key.pem
 
-          ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$HOST << EOF
+          ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$HOST << 'EOF'
             echo "🔍 Verificando red Docker..."
             docker network ls | grep taskify-network || docker network create taskify-network
 
@@ -40,8 +39,11 @@ jobs:
             docker stop user-service || true
             docker rm user-service || true
 
+            echo "📋 Verificando que el contenedor fue eliminado..."
+            docker ps -a
+
             echo "🚀 Iniciando nuevo contenedor..."
-            docker run -d --name user-service -p 3000:3000 --network=taskify-network \
+            docker run -d --name user-service -p 3000:3000 --restart=always --network=taskify-network \
               -e DB_HOST=${{ secrets.DB_HOST }} \
               -e DB_NAME=dbusers \
               -e DB_USER=user_db \
@@ -49,7 +51,7 @@ jobs:
               -e JWT_SECRET=supersecretkey \
               ${{ secrets.DOCKER_USERNAME }}/user-service:latest
 
-            echo "✅ Despliegue completado."
+            echo "✅ Despliegue completado con éxito."
           EOF
 
           rm -f private_key.pem
